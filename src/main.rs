@@ -187,12 +187,16 @@ fn try_main() -> MainResult<i32> {
     #[cfg(unix)]
     {
         let mut cmd = action.cargo(&args.script_args)?;
+        // FixME: copy executable
+        // FixME: avoid run on --exe-only
         let err = cmd.exec();
         Err(MainError::from(err))
     }
     #[cfg(not(unix))]
     {
         let mut cmd = action.cargo(&args.script_args)?;
+        // FixME: copy executable
+        // FixME: avoid run on --exe-only
         let exit_code = cmd.status().map(|st| st.code().unwrap_or(1))?;
         Ok(exit_code)
     }
@@ -361,10 +365,11 @@ impl InputAction {
         let mut exe_path = self.exe_path.clone();
         let script_path = &self.script_path;
         if (self.exe || self.exe_only) && exe_path.is_none() {
-            exe_path = Some(script_path.with_file_name(&self.bin_name));
+            exe_path = Some(script_path.with_extension(std::env::consts::EXE_EXTENSION));
             debug!("exe_path: {:?}", exe_path);
         }
 
+        // FixME: copying from old version here...fix to copy old only if not generating new o/w copy after new exe is generated
         match exe_path {
             Some(path) => {
                 let from = built_binary_path.clone();
@@ -391,7 +396,7 @@ impl InputAction {
             cmd
         };
 
-        if matches!(self.build_kind, BuildKind::Normal) && !self.force_compile && !self.exe_only {
+        if matches!(self.build_kind, BuildKind::Normal) && !self.force_compile {
             match fs::File::open(&built_binary_path) {
                 Ok(built_binary_file) => {
                     // When possible, use creation time instead of modified time as cargo may copy

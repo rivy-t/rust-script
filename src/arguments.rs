@@ -230,7 +230,7 @@ impl Args {
             count: m.get_flag("count"),
 
             exe: m.get_flag("exe"),
-            exe_only: m.get_flag("exe-only"),
+            exe_only: m.get_flag("exe_only"),
             exe_path: m.get_one::<String>("exe_path").map(Into::into),
             pkg_path: m.get_one::<String>("pkg_path").map(Into::into),
             gen_pkg_only: m.get_flag("gen_pkg_only"),
