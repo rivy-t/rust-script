@@ -292,7 +292,13 @@ struct InputAction {
     /// Execute the compiled binary?
     execute: bool,
 
-    /// Target path for a copy of the compiled executable.
+    /// Copy generated executable to source directory (as a sibling file).
+    exe: bool,
+
+    /// Compile-only, then copy the generated executable to source directory (as a sibling file).
+    exe_only: bool,
+
+    /// Target path for a copy of the generated executable.
     exe_path: Option<PathBuf>,
 
     /// Directory where the package should live.
@@ -352,8 +358,15 @@ impl InputAction {
                 }
             });
 
-        match &self.exe_path {
-            Some(ref path) => {
+        let mut exe_path = self.exe_path.clone();
+        let script_path = &self.script_path;
+        if (self.exe || self.exe_only) && exe_path.is_none() {
+            exe_path = Some(script_path.with_file_name(&self.bin_name));
+            debug!("exe_path: {:?}", exe_path);
+        }
+
+        match exe_path {
+            Some(path) => {
                 let from = built_binary_path.clone();
                 match path_normalize::normalize_path(path) {
                     Ok(to) => {
@@ -378,7 +391,7 @@ impl InputAction {
             cmd
         };
 
-        if matches!(self.build_kind, BuildKind::Normal) && !self.force_compile {
+        if matches!(self.build_kind, BuildKind::Normal) && !self.force_compile && !self.exe_only {
             match fs::File::open(&built_binary_path) {
                 Ok(built_binary_file) => {
                     // When possible, use creation time instead of modified time as cargo may copy
@@ -472,6 +485,9 @@ fn decide_action_for(
 
     let pkg_name = input.package_name();
     let bin_name = format!("{}_{}", &*pkg_name, input_id.to_str().unwrap());
+
+    let exe = args.exe;
+    let exe_only = args.exe_only;
     let exe_path = args.exe_path.as_ref().map(|os| PathBuf::from(os));
     info!("exe_path: {:?}", exe_path);
 
@@ -517,6 +533,8 @@ fn decide_action_for(
         cargo_output: args.cargo_output,
         force_compile: args.force,
         execute: !args.gen_pkg_only,
+        exe,
+        exe_only,
         exe_path,
         pkg_path,
         script_path,

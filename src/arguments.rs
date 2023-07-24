@@ -9,6 +9,8 @@ pub struct Args {
     pub expr: bool,
     pub loop_: bool,
     pub count: bool,
+    pub exe: bool,
+    pub exe_only: bool,
     pub exe_path: Option<String>,
     pub pkg_path: Option<String>,
     pub gen_pkg_only: bool,
@@ -131,6 +133,18 @@ impl Args {
                 .requires("script")
                 .conflicts_with_all(["debug", "force", "test", "bench"])
             )
+            .arg(Arg::new("exe")
+                .help("Write a copy of the generated executable as a sibling file of the source")
+                .long("exe")
+                .action(ArgAction::SetTrue)
+                .requires("script")
+            )
+            .arg(Arg::new("exe_only")
+                .help("Write a copy of the generated executable as a sibling file of the source")
+                .long("exe-only")
+                .action(ArgAction::SetTrue)
+                .requires("script")
+            )
             .arg(Arg::new("exe_path")
                 .help("Specify where to place the generated executable")
                 .long("exe-path")
@@ -215,6 +229,8 @@ impl Args {
             loop_: m.get_flag("loop"),
             count: m.get_flag("count"),
 
+            exe: m.get_flag("exe"),
+            exe_only: m.get_flag("exe-only"),
             exe_path: m.get_one::<String>("exe_path").map(Into::into),
             pkg_path: m.get_one::<String>("pkg_path").map(Into::into),
             gen_pkg_only: m.get_flag("gen_pkg_only"),
