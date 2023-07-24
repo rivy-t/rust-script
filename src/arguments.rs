@@ -9,6 +9,7 @@ pub struct Args {
     pub expr: bool,
     pub loop_: bool,
     pub count: bool,
+    pub exe_path: Option<String>,
     pub pkg_path: Option<String>,
     pub gen_pkg_only: bool,
     pub cargo_output: bool,
@@ -130,6 +131,12 @@ impl Args {
                 .requires("script")
                 .conflicts_with_all(["debug", "force", "test", "bench"])
             )
+            .arg(Arg::new("exe_path")
+                .help("Specify where to place the generated executable")
+                .long("exe-path")
+                .num_args(1)
+                .requires("script")
+            )
             .arg(Arg::new("pkg_path")
                 .help("Specify where to place the generated Cargo package")
                 .long("pkg-path")
@@ -208,6 +215,7 @@ impl Args {
             loop_: m.get_flag("loop"),
             count: m.get_flag("count"),
 
+            exe_path: m.get_one::<String>("exe_path").map(Into::into),
             pkg_path: m.get_one::<String>("pkg_path").map(Into::into),
             gen_pkg_only: m.get_flag("gen_pkg_only"),
             cargo_output: m.get_flag("cargo-output"),

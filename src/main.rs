@@ -6,6 +6,7 @@ mod consts;
 mod defer;
 mod error;
 mod manifest;
+mod path_normalize;
 mod platform;
 mod templates;
 
@@ -291,6 +292,9 @@ struct InputAction {
     /// Execute the compiled binary?
     execute: bool,
 
+    /// Target path for a copy of the compiled executable.
+    exe_path: Option<PathBuf>,
+
     /// Directory where the package should live.
     pkg_path: PathBuf,
 
@@ -347,6 +351,24 @@ impl InputAction {
                     &self.bin_name
                 }
             });
+
+        match &self.exe_path {
+            Some(ref path) => {
+                let from = built_binary_path.clone();
+                match path_normalize::normalize_path(path) {
+                    Ok(to) => {
+                        debug!(
+                            "Copy binary from '{}' to '{}'",
+                            from.display(),
+                            to.display()
+                        );
+                        fs::copy(from, to)?;
+                    }
+                    _ => {}
+                };
+            }
+            _ => {}
+        }
 
         let manifest_path = self.manifest_path();
 
@@ -450,6 +472,8 @@ fn decide_action_for(
 
     let pkg_name = input.package_name();
     let bin_name = format!("{}_{}", &*pkg_name, input_id.to_str().unwrap());
+    let exe_path = args.exe_path.as_ref().map(|os| PathBuf::from(os));
+    info!("exe_path: {:?}", exe_path);
 
     let (pkg_path, using_cache) = args
         .pkg_path
@@ -493,6 +517,7 @@ fn decide_action_for(
         cargo_output: args.cargo_output,
         force_compile: args.force,
         execute: !args.gen_pkg_only,
+        exe_path,
         pkg_path,
         script_path,
         using_cache,
