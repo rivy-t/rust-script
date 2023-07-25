@@ -21,25 +21,28 @@ const RESERVED_NAMES: [&'static str; 22] = [
 
 // is_reserved_path(path: &str) -> bool
 /// exact, case-insensitive comparison to reserved names
-#[cfg_attr(not(windows), allow(dead_code))]
-pub fn is_reserved_path(_path: &OsStr) -> bool {
+// #[cfg_attr(not(windows), allow(dead_code))]
+pub fn is_reserved_path(path: &OsStr) -> bool {
     #[cfg(windows)]
     {
-        let path = _path;
         // exact, case-insensitive comparison to reserved names (which are all uppercase, ASCII-character-only strings)
         // * to_string_lossy() is lossless when converting ASCII-character-only strings
         if RESERVED_NAMES.contains(&path.to_string_lossy().to_ascii_uppercase().as_str()) {
             return true;
         };
     }
+    let _ = path; // suppress unused warning
     false
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum NormalizeMode {
-    /// Normalize the path only if it exists (ie, as `fs::canonicalize()`).
+    /// Normalize the path only if it (or parent) exists (ie, as `fs::canonicalize()`).
     Strict,
-    /// Normalize the path lexically, based solely on the path text, if the path does not exist.
+    /// Normalize the path only if it (or *any* parent) exists, normalizing lexically for later paths.
+    /// * note: this will check for the existence of the nearest parent path, which may be expensive
+    Hybrid,
+    /// Normalize the path lexically, based solely on the path text, if the path (or parent) does not exist.
     #[default]
     Lexical,
 }
@@ -61,7 +64,7 @@ pub fn normalize_path_with_options<P: AsRef<Path> + std::fmt::Debug>(
     // avoid TOC/TOU race condition for path existence/fs::canonicalize() by checking result instead
     let result = fs::canonicalize(path);
     match result {
-        Ok(result) => return Ok(result),
+        Ok(pathbuf) => return Ok(dunce::simplified(&pathbuf).to_path_buf()),
         Err(e) => {
             if e.kind() == std::io::ErrorKind::NotFound && options.mode == NormalizeMode::Strict {
                 return Err(e);

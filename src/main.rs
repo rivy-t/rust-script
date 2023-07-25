@@ -369,24 +369,25 @@ impl InputAction {
             debug!("exe_path: {:?}", exe_path);
         }
 
-        // FixME: copying from old version here...fix to copy old only if not generating new o/w copy after new exe is generated
-        match exe_path {
-            Some(path) => {
-                let from = built_binary_path.clone();
-                match path_normalize::normalize_path(path) {
-                    Ok(to) => {
-                        debug!(
-                            "Copy binary from '{}' to '{}'",
-                            from.display(),
-                            to.display()
-                        );
-                        fs::copy(from, to)?;
+        let copy_package_executable = || -> std::io::Result<u64> {
+            match &exe_path {
+                Some(path) => {
+                    let from = built_binary_path.clone();
+                    match path_normalize::normalize_path(path) {
+                        Ok(to) => {
+                            debug!(
+                                "Copy binary from '{}' to '{}'",
+                                from.display(),
+                                to.display()
+                            );
+                            fs::copy(from, to)
+                        }
+                        _ => Ok(0),
                     }
-                    _ => {}
-                };
+                }
+                _ => Ok(0),
             }
-            _ => {}
-        }
+        };
 
         let manifest_path = self.manifest_path();
 
@@ -416,6 +417,7 @@ impl InputAction {
                                 && built_binary_time.cmp(&manifest_mtime).is_ge()
                             {
                                 debug!("Keeping old binary");
+                                let _ = copy_package_executable()?;
                                 return Ok(execute_command());
                             } else {
                                 debug!("Old binary too old - rebuilding");
@@ -469,6 +471,7 @@ impl InputAction {
             }
         }
 
+        let _ = copy_package_executable()?;
         Ok(cmd)
     }
 }
